@@ -13,7 +13,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, roc_auc_score, confusion_matrix, roc_curve
 
 # Load data and data exploration
-df = pd.read_csv(r"C:\Users\mreza\Downloads\archive\WA_Fn-UseC_-Telco-Customer-Churn.csv")
+df = pd.read_csv(r"./WA_Fn-UseC_-Telco-Customer-Churn.csv")  # address the data is stored
+# df = pd.read_csv(r"C:\Users\mreza\Downloads\archive\WA_Fn-UseC_-Telco-Customer-Churn.csv")
 
 print("First 5 rows:\n")
 print(df.head())
@@ -135,4 +136,5 @@ feature_importance = pd.DataFrame({
 }).sort_values('Coefficient', key=abs, ascending=False)
 
 print("\nTop 10 Most Important Features:")
+
 print(feature_importance.head(10))
