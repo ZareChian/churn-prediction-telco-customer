@@ -65,24 +65,34 @@ df['Churn'] = df['Churn'].map({'Yes': 1, 'No': 0}) # Convert target variable to 
 # Select features for ML (some excluded accordinf to plots)
 numeric_features = ['tenure', 'MonthlyCharges', 'TotalCharges']
 categorical_features_ml = ['SeniorCitizen', 'Dependents',
-                       'MultipleLines', 'InternetService', 'OnlineSecurity', 'OnlineBackup', 
-                       'DeviceProtection', 'TechSupport', 'StreamingTV', 'StreamingMovies', 
+                       'MultipleLines', 'InternetService', 'OnlineSecurity',
+                       'DeviceProtection', 'TechSupport', 
                        'Contract', 'PaperlessBilling', 'PaymentMethod'] 
                                                                        
-# One-Hot Encoding
-df_encoded = pd.get_dummies(df, columns=categorical_features, drop_first=True, dtype=float)
-
 # Split features and target & Train-Test Split & Scale numeric features
 X = df_encoded.drop(['Churn', 'customerID'], axis=1)
 y = df_encoded['Churn']
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
- 
-scaler = StandardScaler()
-X_train[numeric_features] = scaler.fit_transform(X_train[numeric_features])
-X_test[numeric_features] = scaler.transform(X_test[numeric_features])
 
-print("\nPreprocessed Data Shape:", X_train.shape)
+# One-Hot Encoding
+X_train_encoded = pd.get_dummies(X_train, columns=categorical_features_ml, drop_first=True)
+X_test_encoded = pd.get_dummies(X_test, columns=categorical_features_ml, drop_first=True)
+
+# Align columns (test might have different categories)
+X_train_final, X_test_final = X_train_encoded.align(
+    X_test_encoded, 
+    join='left', 
+    axis=1, 
+    fill_value=0
+)
+
+# Scale numeric features
+scaler = StandardScaler()
+X_train_final[numeric_features] = scaler.fit_transform(X_train_final[numeric_features])
+X_test_final[numeric_features] = scaler.transform(X_test_final[numeric_features])
+
+print("\nPreprocessed Data Shape:", X_train_final.shape)
 
 # Hyperparameter Tuning with GridSearchCV
 param_grid = {
@@ -97,7 +107,7 @@ grid_search = GridSearchCV(
     scoring='roc_auc'              # Optimize for ROC-AUC score
 )
 
-grid_search.fit(X_train, y_train)
+grid_search.fit(X_train_final, y_train)
 
 print("Best Parameters:", grid_search.best_params_)
 print("Best Cross-Validation Score:", grid_search.best_score_)
@@ -106,8 +116,8 @@ print("Best Cross-Validation Score:", grid_search.best_score_)
 best_model = grid_search.best_estimator_
 
 # Model Evaluation
-y_pred = best_model.predict(X_test)
-y_pred_proba = best_model.predict_proba(X_test)[:, 1]
+y_pred = best_model.predict(X_test_final)
+y_pred_proba = best_model.predict_proba(X_test_final)[:, 1]
 
 # Classification Report
 print("Classification Report:")
@@ -131,10 +141,11 @@ plt.show()
 
 # Feature Importance
 feature_importance = pd.DataFrame({
-    'Feature': X_train.columns,
+    'Feature': X_train_final.columns,
     'Coefficient': best_model.coef_[0]
 }).sort_values('Coefficient', key=abs, ascending=False)
 
-print("\nTop 10 Most Important Features:")
+print("\nTop 5 Most Important Features:")
 
-print(feature_importance.head(10))
+print(feature_importance.head(5))
+
